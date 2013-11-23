@@ -77,7 +77,7 @@ var saveUser = function(data, res) {
 			    		}
 			    	}
 			    	catch (e) {
-			    		deleteUser(userData); 
+			    		deleteUser(userData);
 				    	res.json({
 				    		success: false,
 				    		message: 'User database could not be created.',
@@ -113,14 +113,14 @@ module.exports = {
 	    req.assert('password', 'A valid password is required').notEmpty();
 	    req.assert('password', 'Password must be between 4 and 20 characters.').len(4, 20);
 
-	    var errors = req.validationErrors();  
+	    var errors = req.validationErrors();
 	    if(errors){
-	        res.json({ 
-	            success: false,
+            res.json({
+                success: false,
                 message: 'There are validation errors.',
                 errors: errors
-	        });
-	       
+            });
+
 	    }
 	    else if (!errors){
 
@@ -151,7 +151,7 @@ module.exports = {
 	    				data: doc
 	    			});
 	    		}
-	    	});	    	
+	    	});
 	    }
 	}
 };
