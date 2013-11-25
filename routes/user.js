@@ -8,93 +8,100 @@ var db = new(cradle.Connection)({
 });
 var userDb = db.database('_users');
 
-var checkDatabaseExists = function(dBase) {
-	var dbase = db.database(dBase);
-	dbase.exists(function(error, exists) {
-		if (error) {
-			return false;
-		}
-		else if (exists) {
-			return true;
-		}
-		else {
-			return false;
-		}
-	});
-};
-
-var saveUser = function(data, res) {
-
-	userDb.save(data, function(error, response) {
-		if (error) {
-			res.json({
-				success: false,
-				message: 'User could not be created.',
-				data: error
-			});
-		}
-		else {
-
+var user = {
+	createUserDatabase: function(data, res, userData) {
+		var newDb = db.database(data.name);
+		newDb.exists(function(error, exists) {
+			if (error) {
+				user.deleteUser(userData);
+				res.json({
+					success: false,
+					message: 'There was an error creating user database.',
+					data: err
+				});
+			}
+			else if (exists) {
+				user.deleteUser(userData);
+				res.json({
+					success: false,
+					message: 'User database already exists.',
+					data: {}
+				});
+			}
+			else {
+				newDb.create();
+				//setTimeout(function() {
+				//	user.setUserDatabaseSecurity(newDb, data, res, userData);
+				//}, 3000);
+				user.setUserDatabaseSecurity(newDb, data, res, userData);
+			}
+		});
+	},
+	setUserDatabaseSecurity: function(newDb, data, res, userData) {
+		newDb.exists(function(error, exists) {
+			if (!exists) {
+				user.deleteUser(userData);
+				res.json({
+					success: false,
+					message: 'There was an error creating user database.',
+					data: {}
+				});
+			}
+			else {
+				var securityObject = {
+					"admins" : {
+						"names" : [],
+						"roles" : ["admin"]
+					},
+					"members" : {
+						"names" : [data.name],
+						"roles" : []
+					}
+				};
+				newDb.save('_security', securityObject, function(error, response) {
+					if (error) {
+						user.deleteUser(userData);
+						db.destroy(data.name);
+						res.json({
+							success: false,
+							message: 'There was an error creating user database.',
+							data: error
+						});
+					}
+					else {
+						res.json({
+							success: true,
+							message: 'User database created.',
+							data: userData
+						});
+					}
+				});
+			}
+		});
+	},
+	saveUser: function(data, res) {
+		userDb.save(data, function(error, response) {
 			var userData = {
 				id: response.id,
 				rev: response.rev
 			};
-
-			newDb = db.database(data.name);
-			newDb.exists(function (err, exists) {
-			    if (err) {
-			    	deleteUser(userData);
-			      	res.json({
-			      		success: false,
-			      		message: 'There was an error creating user database.',
-			      		data: err
-			      	});
-			    }
-			    else if (exists) {
-			      	res.json({
-			      		success: false,
-			      		message: 'User database already exists.',
-			      		data: {}
-			      	});
-			    }
-			    else {
-			    	try {
-			    		newDb.create();
-			    		if (checkDatabaseExists(data.parsedEmail) === false) {
-			    			deleteUser(userData);
-			    			res.json({
-					    		success: false,
-					    		message: 'User database could not be created.',
-					    		data: {}
-					    	});
-			    		}
-			    		else {
-			    			res.json({
-					    		success: true,
-					    		message: 'User database created.',
-					    		data: {}
-					    	});
-			    		}
-			    	}
-			    	catch (e) {
-			    		deleteUser(userData);
-				    	res.json({
-				    		success: false,
-				    		message: 'User database could not be created.',
-				    		data: {}
-				    	});
-			    	}
-			    }
-		  	});
-		}
-	});
-
-};
-
-var deleteUser = function(userData) {
-	userDb.remove(userData.id, userData.rev, function(err, res) {
-		console.log(err || res);
-	});
+			if (error) {
+				res.json({
+					success: false,
+					message: 'User could not be created.',
+					data: error
+				});
+			}
+			else {
+				user.createUserDatabase(data, res, userData);
+			}
+		});
+	},
+	deleteUser: function(userData) {
+		userDb.remove(userData.id, userData.rev, function(err, res) {
+			console.log(err || res);
+		});
+	}
 };
 
 module.exports = {
@@ -107,51 +114,51 @@ module.exports = {
 
 		// Email validation
 		req.assert('email', 'Email is required').notEmpty();
-	    req.assert('email', 'Email entered is not valid.').isEmail();
+		req.assert('email', 'Email entered is not valid.').isEmail();
 
-	    // password validation
-	    req.assert('password', 'A valid password is required').notEmpty();
-	    req.assert('password', 'Password must be between 4 and 20 characters.').len(4, 20);
+		// password validation
+		req.assert('password', 'A valid password is required').notEmpty();
+		req.assert('password', 'Password must be between 4 and 20 characters.').len(4, 20);
 
-	    var errors = req.validationErrors();
-	    if(errors){
-            res.json({
-                success: false,
-                message: 'There are validation errors.',
-                errors: errors
-            });
+		var errors = req.validationErrors();
+		if(errors){
+			res.json({
+				success: false,
+				message: 'There are validation errors.',
+				data: errors
+			});
 
-	    }
-	    else if (!errors){
+		}
+		else if (!errors){
 
-	    	var displayName = req.sanitize('displayName').trim().toString();
-	    	var email = req.sanitize('email').trim().toString();
-	    	var parsedEmail1 = email.replace('.', '_');
-	    	var parsedEmail = parsedEmail1.replace('@', '_');
-	    	var password = req.sanitize('password').trim().toString();
+			var displayName = req.sanitize('displayName').trim().toString();
+			var email = req.sanitize('email').trim().toString();
+			var parsedEmail1 = email.replace('.', '_');
+			var parsedEmail = parsedEmail1.replace('@', '_');
+			var password = req.sanitize('password').trim().toString();
 
-	    	var data = {
-	    		_id: 'org.couchdb.user:' + parsedEmail,
-	    		type: 'user',
-	    		roles: [],
-	    		name: parsedEmail,
-	    		displayName: displayName,
-	    		email: email,
-	    		password: password
-	    	};
+			var data = {
+				_id: 'org.couchdb.user:' + parsedEmail,
+				type: 'user',
+				roles: [],
+				name: parsedEmail,
+				displayName: displayName,
+				email: email,
+				password: password
+			};
 
-	    	userDb.get('org.couchdb.user:' + data.name, function(error, doc) {
-	    		if (error) {
-	    			saveUser(data, res);
-	    		}
-	    		else {
-	    			res.json({
-	    				success: false,
-	    				message: 'Email already exists in the database.',
-	    				data: doc
-	    			});
-	    		}
-	    	});
-	    }
+			userDb.get('org.couchdb.user:' + data.name, function(error, doc) {
+				if (error) {
+					user.saveUser(data, res);
+				}
+				else {
+					res.json({
+						success: false,
+						message: 'Email already exists in the database.',
+						data: {}
+					});
+				}
+			});
+		}
 	}
 };

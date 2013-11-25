@@ -5,8 +5,7 @@
 
  module.exports = function() {
 
- 	var express = require('express');
-	var routes = require('./routes');
+	var express = require('express');
 	var user = require('./routes/user');
 	var path = require('path');
 	var expressValidator = require('express-validator');
@@ -29,17 +28,16 @@
 
 	// development only
 	if ('development' == app.get('env')) {
-	  app.use(express.errorHandler());
+		app.use(express.errorHandler());
 	}
 
 	app.all('*', function(req, res, next) {
 		res.header('Access-Control-Allow-Origin', '*');
 		res.header('Access-Control-Allow-Methods', 'GET, PUT');
-	  	res.header('Access-Control-Allow-Headers', 'X-Requested-With');
-	  	next();
+		res.header('Access-Control-Allow-Headers', 'X-Requested-With');
+		next();
 	});
 
-	app.get('/', routes.index);
 	app.put('/put/user', user.create);
 
 	return app;
