@@ -124,7 +124,7 @@ module.exports = {
 		if(errors){
 			res.json({
 				success: false,
-				message: 'There are validation errors.',
+				message: 'There are validation errors:',
 				data: errors
 			});
 
